@@ -3,20 +3,19 @@ import tablib
 
 class Report(object):
 
-    def __init__(self, reponame, data, headers=None):
-        self.reponame = reponame
+    def __init__(self, data, headers=None):
         if headers:
             self.headers = headers
         else:
-            self.headers = ('hash', 'type', 'potential')
+            self.headers = ('repo','hash', 'type', 'potential', 'lines')
         self.tdata = tablib.Dataset(*data, headers=self.headers)
 
     def toHtml(self):
-        with open(self.reponame + '.html', 'wb') as f:
+        with open('haprocrates.html', 'w') as f:
             f.write(self.tdata.html)
 
     def toJson(self, toFile=False):
         if toFile:
-            with open(self.reponame + '.json', 'wb') as f:
+            with open('harpocrates.json', 'w') as f:
                 f.write(self.tdata.json)
         return self.tdata.json
