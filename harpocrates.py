@@ -103,14 +103,17 @@ class Harpocrates(object):
 
     def get_org_repos(self, orgname, sleep_time=2):
         cur_page, last_page = 1, 1
-        url = 'https://api.github.com/orgs/' + orgname + '/repos?page='
+        url = 'https://api.github.com/orgs/{}/repos?page=&per_page=100'.format(orgname)
+        nextre = re.compile('/repos\?page=(\d+)>; rel="next"')
+        lastre = re.compile('/repos\?page=(\d+)>; rel="last"')
         while cur_page <= last_page:
-            print(url)
             response = requests.get(url + str(cur_page))
-            nextre = re.compile('/repos\?page=(\d+)>; rel="next"')
-            lastre = re.compile('/repos\?page=(\d+)>; rel="last"')
-            cur_page = int(nextre.findall(response.headers['Link'])[0])
-            last_page = int(lastre.findall(response.headers['Link'])[0])
+           
+            if 'Link' in response.headers:
+                cur_page = int(nextre.findall(response.headers['Link'])[0])
+                last_page = int(lastre.findall(response.headers['Link'])[0])
+            else:
+                cur_page = last_page
             for item in response.json():
                 print(response.headers['X-RateLimit-Remaining'])
                 if item['private'] == False:
