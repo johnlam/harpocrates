@@ -11,7 +11,7 @@ class Report(object):
         self.tdata = tablib.Dataset(*data, headers=self.headers)
 
     def toHtml(self):
-        with open('haprocrates.html', 'w') as f:
+        with open('harpocrates.html', 'w') as f:
             f.write(self.tdata.html)
 
     def toJson(self, toFile=False):

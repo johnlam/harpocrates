@@ -1,5 +1,6 @@
 harpocrates.json
 harpocrates.html
+.vscode
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
