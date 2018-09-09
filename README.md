@@ -17,9 +17,11 @@ The regexes currently include
 
 Heavily based on [https://github.com/dxa4481/truffleHog](https://github.com/dxa4481/truffleHog)
 (It will clone the repo(s) in your `/tmp`)
-Harpocrates now uses truffleHog's regexes
+
+Harpocrates now uses truffleHog's [regexes](https://github.com/dxa4481/truffleHogRegexes)
 
 ## Install
+Requires Python 3
 ```python
 virtualenv env
 source env/bin/activate
@@ -50,6 +52,8 @@ myregex = {'Belgium ID Number':'[0-9]{2}\.?[0-9]{2}\.?[0-9]{2}-[0-9]{3}\.?[0-9]{
 h = Harpocrates(regex=myregex)
 ```
 
+If you have an SSH key configured you can provide the SSH URL to `get_repo`
+
 ## Reporting
 Harpocrates uses [tablib](https://github.com/kennethreitz/tablib)
 
@@ -61,5 +65,5 @@ res = c.get_report('html')
 
 ## TODO
  - [ ] Package and Publish to PyPI
- - [ ] Make reporting better
- - [ ] Clone private repos
+ - [x] Make reporting better
+ - [x] Clone private repos
