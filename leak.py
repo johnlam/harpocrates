@@ -2,15 +2,14 @@ from collections import defaultdict
 
 
 class Leak(object):
-    def __init__(self, commit, potential):
+    def __init__(self, repo, commit, potential, lines):
+        self.repo = repo
         self.leak = commit
         self.potential = potential
+        self.lines = lines
 
     def __str__(self):
         return str(self.leak)
-
-    def __unicode__(self):
-        return unicode(self.leak)
 
     def __hash__(self):
         return hash(self.potential)
@@ -19,32 +18,9 @@ class Leak(object):
         return hash(self.potential) == hash(other)
 
 
-class Leaks(object):
+class Leaks(defaultdict):
     def __init__(self):
-        self.details = defaultdict(set)
-
-    def __len__(self):
-        return len(self.details.keys())
-
-    def __contains__(self, key):
-        if key in self.details:
-            return True
-        return False
-
-    def __getitem__(self, item):
-        return self.details[item]
-
-    def __setitem__(self, item, value):
-        self.details[item].add(value)
-
-    def __str__(self):
-        return str(self.details)
-
-    def __repr__(self):
-        return self.__str__()
+        super().__init__(set)
 
     def add(self, key, value):
-        self.details[key].add(value)
-
-    def iteritems(self):
-        return self.details.iteritems()
+        self.__dict__[key] = value

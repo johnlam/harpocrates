@@ -17,6 +17,7 @@ The regexes currently include
 
 Heavily based on [https://github.com/dxa4481/truffleHog](https://github.com/dxa4481/truffleHog)
 (It will clone the repo(s) in your `/tmp`)
+Harpocrates now uses truffleHog's regexes
 
 ## Install
 ```python
@@ -33,7 +34,7 @@ Scan a repo
 
 from harpocrates import Harpocrates
 h = Harpocrates()
-repo = h.find_strings('https://github.com/foo/bar')
+repo = h.get_repo('https://github.com/foo/bar')
 
 ```
 Scan a github org
@@ -54,8 +55,8 @@ Harpocrates uses [tablib](https://github.com/kennethreitz/tablib)
 
 Get Json or Html
 ```python
-res = c.get_report('nameofrepo',c.results,'json')
-res = c.get_report('nameofrepo',c.results,'html')
+res = c.get_report('json')
+res = c.get_report('html')
 ```
 
 ## TODO

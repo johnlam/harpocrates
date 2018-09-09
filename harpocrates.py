@@ -1,10 +1,13 @@
-import re
-from git import Repo
-import requests
-import tempfile
 import base64
-from leak import Leaks, Leak
+import re
+import tempfile
 import time
+
+import requests
+from git import Repo
+from truffleHogRegexes.regexChecks import regexes as truffleregex
+
+from leak import Leak, Leaks
 from report import Report
 
 
@@ -20,15 +23,11 @@ class Harpocrates(object):
                     '?[\s-]?\d{4,5})|(?:\d{4}\)?[\s-]?(?:\d{5}|\d{3}[\s-]?\d'
                     '{3}))|(?:\d{3}\)?[\s-]?\d{3}[\s-]?\d{3,4})|(?:\d{2}\)?['
                     '\s-]?\d{4}[\s-]?\d{4}))(?:[\s-]?(?:x|ext\.?|\#)\d{3,4})?',
-                "AWS ID": 'AKIA[0-9A-Z]{16}',
-                "AWS Secret Precise": '(?<=(\'|\"| |\n))[A-Za-z0-9/+=]{40}'
-                    '(?![a-zA-Z0-9])',
-                "AWS Secret": '[A-Za-z0-9/+=]{40}',
-                "Priv Keys": 'BEGIN RSA PRIVATE KEY',
                 "United Kingdom National Insurance Number":
                 '(?!BG)(?!GB)(?!NK)(?!KN)(?!TN)(?!NT)(?!ZZ)(?:[A-CEGHJ-PR-TW-Z][A'
                     '-CEGHJ-NPR-TW-Z])(?:\s*\d\s*){6}([A-D]|\s)',
-                "Email": '[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}'
+                "Email": '[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}',
+                **truffleregex
             }
         self.org_repos = {}
 
@@ -49,10 +48,11 @@ class Harpocrates(object):
     def is_luhn_valid(card_number):
         return Harpocrates.luhn_checksum(card_number) == 0
 
-    def find_strings(self, git_url):
+    def get_repo(self, git_url):
         self.results = Leaks()
         project_path = tempfile.mkdtemp()
         Repo.clone_from(git_url, project_path)
+        reponame = '/'.join(git_url.split('/')[-2:])
         repo = Repo(project_path)
         already_searched = set()
 
@@ -79,9 +79,8 @@ class Harpocrates(object):
                                                          errors='replace')
                         if printableDiff.startswith("Binary files"):
                             continue
-                        stringsFound = []
                         lines = blob.diff.decode('utf-8', errors='replace')
-                        for k, v in self.regexes.iteritems():
+                        for k, v in self.regexes.items():
                             if re.search(v, lines):
                                 potential = re.search(v, lines).group(0)
                                 if k in self.results and potential in self.results[k]:
@@ -91,54 +90,45 @@ class Harpocrates(object):
                                 elif k.startswith('Credit Card'):
                                     if Harpocrates.is_luhn_valid(potential):
                                         self.results[k].add(
-                                            Leak(curr_commit, potential))
-                                elif k.startswith('AWS Secret'):
-                                    try:
-                                        base64.b64decode(potential)
-                                        self.results[k].add(
-                                            Leak(curr_commit, potential))
-                                    except TypeError as e:
-                                        continue
+                                            Leak(reponame, curr_commit, potential,
+                                                 lines))
                                 else:
-                                    self.results[k].add(Leak(curr_commit,
-                                                             potential))
+                                    self.results[k].add(Leak(reponame,
+                                                             curr_commit,
+                                                             potential,
+                                                             lines))
                 prev_commit = curr_commit
 
         return self.results
 
-    def get_org_repos(self, orgname,sleep_time=2):
+    def get_org_repos(self, orgname, sleep_time=2):
         cur_page, last_page = 1, 1
         url = 'https://api.github.com/orgs/' + orgname + '/repos?page='
         while cur_page <= last_page:
-            print url
+            print(url)
             response = requests.get(url + str(cur_page))
-            print response.url
-            print cur_page
-            json = response.json()
-            pat = '/repos\?page=(\d+)'
-            p = re.compile(pat)
-            page_info = p.findall(response.headers['Link'])
-            print response.headers['Link']
-            print page_info
-            cur_page = int(page_info[0])
-            last_page = int(page_info[1])
-            for item in json:
-                print response.headers['X-RateLimit-Remaining']
+            nextre = re.compile('/repos\?page=(\d+)>; rel="next"')
+            lastre = re.compile('/repos\?page=(\d+)>; rel="last"')
+            cur_page = int(nextre.findall(response.headers['Link'])[0])
+            last_page = int(lastre.findall(response.headers['Link'])[0])
+            for item in response.json():
+                print(response.headers['X-RateLimit-Remaining'])
                 if item['private'] == False:
                     print('searching ' + item["html_url"])
                     reponame = item["html_url"].split('/')[-1]
-                    self.org_repos[reponame] = find_strings(item["html_url"])
+                    self.org_repos[reponame] = self.get_repo(
+                        item["html_url"])
 
             time.sleep(sleep_time)
 
-    def get_report(self, reponame, data, out, headers):
+    def get_report(self, out):
         transformdata = []
-        for k,items in data.iteritems():
+        for k, items in self.results.items():
             for item in items:
-                transformdata.append((str(item),k,item.potential))
+                transformdata.append(
+                    (str(item), k, item.potential, item.lines))
 
-        r = Report(reponame, transformdata, headers)
-        data = []
+        r = Report(transformdata)
         if out == 'html':
             r.toHtml()
         elif out == 'jsonfile':
